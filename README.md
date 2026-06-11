@@ -1,7 +1,5 @@
 <div align="center">
 
-<!-- Animated banner GIF suggestion: use a cyberpunk/data-flow gif from giphy or create one -->
-<!-- Replace the src below with your actual GIF URL -->
 <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDd6bGJoZHZ2ZDNrcWVneHZ6aGw3NzBheTQwdDFhaTl3MHNnNXV1eCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3oKIPEqDGUULpEU0aQ/giphy.gif" width="100%" height="200" style="object-fit:cover;border-radius:12px" alt="data flow animation"/>
 
 <br/><br/>
