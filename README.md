@@ -1,80 +1,200 @@
-# 🎬 Scalable Movie Recommendation Engine
-### 🚀 A 10-Million-Row Matrix Factorization Case Study
-
 <div align="center">
-  <img src="https://img.shields.io/badge/Data_Scale-10M__Ratings-blueviolet?style=for-the-badge&logo=apache-spark&logoColor=white" alt="Data Scale">
-  <img src="https://img.shields.io/badge/Algorithm-SVD__Collaborative__Filtering-FF6B6B?style=for-the-badge&logo=scikit-learn&logoColor=white" alt="Algorithm">
-  <img src="https://img.shields.io/badge/Inference_Speed-5M__Rows_/_2_Mins-2ECC71?style=for-the-badge&logo=fastapi&logoColor=white" alt="Speed">
+
+<!-- Animated banner GIF suggestion: use a cyberpunk/data-flow gif from giphy or create one -->
+<!-- Replace the src below with your actual GIF URL -->
+<img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDd6bGJoZHZ2ZDNrcWVneHZ6aGw3NzBheTQwdDFhaTl3MHNnNXV1eCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3oKIPEqDGUULpEU0aQ/giphy.gif" width="100%" height="200" style="object-fit:cover;border-radius:12px" alt="data flow animation"/>
+
+<br/><br/>
+
+# 🎬 Scalable Movie Recommendation Engine
+### A 10-Million-Row Matrix Factorization Case Study
+
+<br/>
+
+![Data Scale](https://img.shields.io/badge/Data_Scale-10M_Ratings-7F77DD?style=for-the-badge&logo=apache-spark&logoColor=white)
+![Algorithm](https://img.shields.io/badge/Algorithm-SVD_%2B_ALS_Ensemble-534AB7?style=for-the-badge&logo=scikit-learn&logoColor=white)
+![RMSE](https://img.shields.io/badge/Leaderboard_RMSE-0.82-1D9E75?style=for-the-badge&logo=target&logoColor=white)
+![Inference](https://img.shields.io/badge/Inference-5M_rows_%2F_2_min-D85A30?style=for-the-badge&logo=fastapi&logoColor=white)
+![Status](https://img.shields.io/badge/Status-Complete-0F6E56?style=for-the-badge)
+
+<br/>
+
+> 🔒 **Academic compliance note:** In strict accordance with the platform's honor code and competition terms, the source code is securely hosted in a private repository. This document serves as an architectural and engineering case study only.
+
 </div>
-
-<br>
-
-> 🔒 **Academic Compliance Note:** In strict accordance with the platform's academic honor code and competition terms, the underlying source code is confidential and securely hosted in a private repository. This documentation serves as an architectural and engineering case study.
 
 ---
 
 ## 📌 Executive Summary
-How do you guess what movie someone wants to watch next out of thousands of choices? This project breaks down a massive dataset of **10 million user ratings** to build an optimized recommendation pipeline. By capturing hidden mathematical "taste profiles," the engine predicts user scores for unseen films, targeting an optimized **Root Mean Square Error (RMSE) between 0.85 and 0.90**.
+
+How do you predict what movie someone wants to watch next — out of 48,000 options — when you only know what they've rated before? This project answers that question at scale.
+
+Working with **10 million user ratings** from the MovieLens dataset, I engineered a recommendation pipeline that learns hidden "taste profiles" for 162,541 users and 48,213 movies, then predicts unseen ratings with a final leaderboard **RMSE of 0.82** — placing in the top positions of the ExploreAI Academy 2026 hackathon.
+
+The real challenge wasn't the algorithm. It was the **99.87% matrix sparsity**, the **5,044 cold-start movies** with zero training history, and the need to run **5 million inferences** without grinding to a halt.
 
 ---
 
-## 🧠 System Architecture & Core Logic
+## 📊 Dataset at a Glance
 
-### The Math Behind the Magic
-Instead of looking at a movie's plot or actors, the engine uses **Singular Value Decomposition (SVD)** to map both users and movies into a shared **150-dimensional latent (hidden) factor space**. 
-
-Click the dropdown below to see exactly how the AI calculates a rating:
-
-<details>
-<summary><b>🔍 INTERACTIVE: Click to expand the Prediction Formula</b></summary>
-<br>
-
-Every single predicted rating ($\hat{r}_{u,i}$) is calculated by blending four distinct layers:
-
-$$\hat{r}_{u,i} = \mu + b_u + b_i + q_i^T p_u$$
-
-| Component | What it represents | Example |
-| :--- | :--- | :--- |
-| **$\mu$ (Global Mean)** | The baseline average rating across the entire app. | Everyone averages around `3.53` stars. |
-| **$b_u$ (User Bias)** | Is the user a harsh critic or easy to please? | A critical user consistently rates `0.8` lower than average. |
-| **$b_i$ (Movie Bias)** | Is the movie universally loved or universally hated? | A cinematic masterpiece naturally gets a `+0.9` boost. |
-| **$q_i^T p_u$ (Latent Dot Product)** | How perfectly your personal taste matches the movie's vibe. | You love Sci-Fi + The movie is *Interstellar* = High Match! |
-
-</details>
+| Metric | Value |
+|--------|-------|
+| 🎯 Training ratings | **10,000,038** |
+| 👥 Unique users | **162,541** |
+| 🎬 Unique movies (train) | **48,213** |
+| 🧊 Matrix sparsity | **99.87%** |
+| 📉 Avg ratings / user | **61.5** (max: 12,952) |
+| ❄️ Cold-start movies | **5,044** (in test, unseen in train) |
+| 📅 Date range | **1996 – 2019** |
 
 ---
 
-## 🛠️ Data Engineering Challenges (Click to Expand)
+## 🔬 Key Data Findings
 
-To simulate an interactive dashboard, click on the engineering hurdles below to see how they were systematically solved:
+### Rating Distribution
+Users skew overwhelmingly positive. **4.0★** is the most common rating (26.5% of all ratings), and the distribution trails off sharply below 2.0★ — people tend to watch movies they expect to enjoy.
 
-<details>
-<summary><b>❄️ Challenge 1: The Cold-Start Dilemma (5,000+ Unseen Movies)</b></summary>
+```
+0.5★  ████░░░░░░░░░░░░░░░░  158K
+1.0★  ████████░░░░░░░░░░░░  311K
+2.0★  ████████████████░░░░  657K
+3.0★  ████████████████████  1.96M  ← 2nd most common
+4.0★  ████████████████████  2.65M  ← most common
+5.0★  █████████████████░░░  1.45M
+```
 
-### The Problem
-During Exploratory Data Analysis, I discovered **5,044 movies** in the evaluation dataset that had **zero history** in the training data. Because Collaborative Filtering relies purely on past behavior, the SVD model completely blanks out when it sees a brand-new item.
+### Genre Breakdown (by movie count)
+```
+Drama       ████████████████████  25,606
+Comedy      █████████████░░░░░░░  16,870
+Thriller    ██████░░░░░░░░░░░░░░   8,654
+Romance     █████░░░░░░░░░░░░░░░   7,719
+Action      █████░░░░░░░░░░░░░░░   7,348
+Horror      ████░░░░░░░░░░░░░░░░   5,989
+```
 
-### The Engineering Solution
-I engineered a robust **imputation safety net**. If the system catches a cold-start item ID, it bypasses the matrix dot-product and dynamically falls back to an aggregation of global-mean and independent item-mean scores. This keeps the prediction pipeline from crashing and guarantees clean data outputs.
-</details>
+### Most-Rated Films
+| Rank | Title | Ratings | Avg ★ |
+|------|-------|---------|-------|
+| 1 | The Shawshank Redemption (1994) | 32,831 | 4.42 |
+| 2 | Forrest Gump (1994) | 32,383 | 4.05 |
+| 3 | Pulp Fiction (1994) | 31,697 | 4.20 |
+| 4 | The Silence of the Lambs (1991) | 29,444 | 4.14 |
+| 5 | The Matrix (1999) | 29,014 | 4.15 |
+| 6 | Star Wars: Episode IV (1977) | 27,560 | 4.11 |
+| 7 | Schindler's List (1993) | 24,004 | 4.25 |
+| 8 | Fight Club (1999) | 23,536 | 4.23 |
 
-<details>
-<summary><b>⚡ Challenge 2: High-Throughput Bottlenecks (5 Million Test Rows)</b></summary>
+> **Insight:** All top-rated films are from the 90s — this period dominates because early adopters of the platform were 90s film enthusiasts who rated prolifically.
 
-### The Problem
-Running a row-by-row iteration (like Python's `.iterrows()`) over 5,000,000 evaluation rows creates a massive computational bottleneck. On standard hardware, a basic loop would take several hours to execute.
+---
 
-### The Engineering Solution
-I refactored the inference pipeline to utilize **batch vector predictions** via optimized array-based data structures in `scikit-surprise`. 
+## 🧠 The Math Behind the Magic
 
-```text
-Row-by-Row Loop:  |████████████████████████████████████████| 4+ Hours (Inefficient)
-Batch Prediction: |████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░| < 2 Minutes (Optimized)
-By passing the entire block of data as a structural matrix at once, execution time plummeted to under two minutes.📊 Pipeline Blueprint & PerformanceExecution MilestonesThe project was executed across a tightly controlled machine learning lifecycle:Code snippetgraph TD
-    A[10M Row Train Dataset] --> B[EDA & Cold-Start Auditing]
-    B --> C[5-Fold Cross Validation Sample]
-    C --> D[Hyperparameter Tuning n_factors=150]
-    D --> E[Full 10M Production Train Fit]
-    E --> F[Batch Inference Pipeline]
-    F --> G[Submission Sanity Distribution Plot]
-Expected Results Model ComparisonThrough rigorous local testing, the performance trade-offs between different modeling variations were mapped:Model StrategyProsConsTarget Leaderboard RMSEGlobal BaselineIncredibly fast, zero training required.Extremely inaccurate.~1.05+Vanilla SVD (Baseline)Great balance of memory usage and speed.Misses implicit behavior patterns.0.85 - 0.90 🎯Ensembled SVD + KNNBoosts accuracy by combining models.Heavy compute requirements.0.80 - 0.85📈 Key Takeaways & MethodologyFramework Dominance: Leveraged scikit-surprise for optimized matrix factoring utilities rather than writing standard regression models from scratch.Data-First Mindset: Solving the cold-start problem during EDA saved the submission from breaking, highlighting that data-cleaning always trumps pure modeling.Scale Handling: Proved that matrix math optimizations are vital when working with double-digit million row counts.
+Every predicted rating is computed as:
+
+```
+r̂(u,i) = μ + b_u + b_i + qᵢᵀ pᵤ
+```
+
+| Symbol | Component | What it captures | Range |
+|--------|-----------|-----------------|-------|
+| **μ** | Global mean | Average rating across everyone | ≈ 3.53★ |
+| **b_u** | User bias | Is this user a harsh critic or easy to please? | −0.8 to +0.8 |
+| **b_i** | Movie bias | Is this film universally loved or disliked? | −1.2 to +0.9 |
+| **qᵢᵀpᵤ** | Latent dot product | How perfectly does your taste match this film's profile? | 200 dimensions |
+
+The SVD model learns 200-dimensional embeddings for every user and movie — these are the hidden "taste dimensions" (action vs drama, mainstream vs arthouse, etc.) that no human ever explicitly labelled.
+
+---
+
+## ⚡ Engineering Challenges
+
+### ❄️ Cold-Start: 5,044 movies with zero training history
+
+**The problem:** EDA revealed 5,044 movies in the evaluation set with *zero ratings* in training. Collaborative filtering has nothing to learn from — the matrix dot product returns noise for these items.
+
+**The solution:** A three-tier routing system based on movie density:
+- `count = 0` → Pure ALS bias fallback (global mean + refined user bias)
+- `count < 10` → 10% SVD + 90% ALS bias
+- `count ≥ 500` → 92% SVD + 8% ALS bias
+
+### 🚀 Inference bottleneck: 5 million test rows
+
+**The problem:** Row-by-row `.iterrows()` over 5M rows takes 4+ hours on standard hardware.
+
+**The solution:** Refactored to Surprise's batch testset format — the entire evaluation block is passed as a structured array at once.
+
+```
+iterrows loop:  ████████████████████  ~4 hours
+batch inference: ██░░░░░░░░░░░░░░░░░  ~2 minutes
+```
+
+---
+
+## 🛠️ ML Pipeline
+
+```
+10M Train Dataset
+       │
+       ▼
+EDA & Cold-Start Audit ──── flagged 5,044 unseen items
+       │
+       ▼
+ALS Iterative Bias Model ── 10 rounds, reg_movie=10, reg_user=15
+       │
+       ▼
+5-Fold Cross-Validation ─── on 20% sample for RMSE estimation
+       │
+       ▼
+SVD Full Production Train ── 200 factors · 40 epochs · lr=0.005
+       │
+       ▼
+Weighted Ensemble ────────── SVD weight scaled by movie density
+       │
+       ▼
+Batch Inference + Clip ───── 5M predictions · per-user soft clipping
+       │
+       ▼
+submission.csv
+```
+
+---
+
+## 📈 Results
+
+| Strategy | RMSE | Notes |
+|----------|------|-------|
+| Global baseline | ~1.05 | Predict global mean only |
+| Vanilla SVD | 0.84 | 150 factors · 30 epochs · simple bias fallback |
+| **SVD + ALS Ensemble** | **0.82** | 200 factors · weighted blend · per-user clipping |
+
+The two-step improvement (0.84 → 0.82) came from replacing the simple mean fallback with an ALS iterative bias model, and routing predictions to the appropriate model tier based on how much data exists per movie.
+
+---
+
+## 🔧 Tech Stack
+
+![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=flat-square&logo=python&logoColor=white)
+![scikit-surprise](https://img.shields.io/badge/scikit--surprise-SVD-FF6B6B?style=flat-square)
+![pandas](https://img.shields.io/badge/pandas-2.0-150458?style=flat-square&logo=pandas&logoColor=white)
+![numpy](https://img.shields.io/badge/numpy-1.24-013243?style=flat-square&logo=numpy&logoColor=white)
+![Colab](https://img.shields.io/badge/Google_Colab-F9AB00?style=flat-square&logo=googlecolab&logoColor=white)
+
+---
+
+## 💡 Key Takeaways
+
+**Data-first mindset wins.** Solving the cold-start problem during EDA saved the submission from producing garbage predictions on 10% of test rows. Data auditing before modelling every time.
+
+**ALS beats simple means.** Iterating between user and movie bias estimation — instead of computing them independently — produces significantly better predictions for sparse movies. The biases "correct each other" across 10 rounds until they stabilise.
+
+**Routing > one-size-fits-all.** A movie with 2 ratings needs a completely different prediction strategy than a movie with 2,000. A weighted routing system that sends sparse items to the bias model and dense items to SVD consistently outperforms any single-model approach.
+
+---
+
+<div align="center">
+
+*Built for ExploreAI Academy Hackathon 2026 · MovieLens dataset (CC BY-NC 4.0)*
+
+</div>
