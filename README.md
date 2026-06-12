@@ -25,7 +25,7 @@
 
 ## 📌 Executive Summary
 
-How do you predict what movie someone wants to watch next — out of 48,000 options — when you only know what they've rated before? This project answers that question at scale.
+How do you predict what movie someone wants to watch next ...out of 48,000 options , when you only know what they've rated before? This project answers that question at scale.
 
 Working with **10 million user ratings** from the MovieLens dataset, I engineered a recommendation pipeline that learns hidden "taste profiles" for 162,541 users and 48,213 movies, then predicts unseen ratings with a final leaderboard **RMSE of 0.82** — placing in the top positions of the ExploreAI Academy 2026 hackathon.
 
